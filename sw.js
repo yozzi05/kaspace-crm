@@ -1,5 +1,5 @@
 // Простой офлайн-кэш оболочки приложения. Данные хранит Firebase, здесь только файлы сайта.
-const CACHE = 'kaspace-crm-v4';
+const CACHE = 'kaspace-crm-v5';
 const SHELL = ['./', './index.html', './firebase-config.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {

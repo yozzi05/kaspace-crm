@@ -28,7 +28,7 @@
   --shadow-lg:0 30px 70px -16px rgba(15,23,18,.35);
   --overlay:rgba(15,23,18,.45);
   --s-lead:#8A968B; --s-contact:#5F97A8; --s-brief:#8A80B4; --s-proposal:#C4974A; --s-negotiation:#C47650;
-  --s-work:#5E8C61; --s-review:#A47599; --s-paid:#2F7A45; --s-pause:#A2AAA0; --s-lost:#B5493C;
+  --s-prepaid:#3F8F86; --s-work:#5E8C61; --s-review:#A47599; --s-paid:#2F7A45; --s-pause:#A2AAA0; --s-lost:#B5493C;
   --c-tg:#3C97C4; --c-wa:#3E9C5C; --c-ig:#C2557F; --c-vk:#4E78BE; --c-mail:#7E70B8; --c-call:#C47A3F; --c-meet:#A88A3A; --c-in:#3F6E9E; --c-be:#3D63B8; --c-web:#3E8F86; --c-ref:#5E8C61; --c-etc:#8A968B;
   --av1:#5E8C61; --av2:#C47650; --av3:#5F97A8; --av4:#8A80B4; --av5:#C4974A; --av6:#A47599; --av7:#3F6B4A; --av8:#4A564C;
   --f-display:'Unbounded','Arial Black',sans-serif;
@@ -375,6 +375,30 @@ tbody tr:hover td{background:var(--surface-2)}
   @keyframes slide{from{transform:translateX(40px);opacity:.5}}
   @keyframes pop{from{transform:scale(.97);opacity:.6}}
 }
+/* предоплата */
+.chip.pre{background:color-mix(in srgb,var(--s-prepaid) 16%,var(--surface));color:var(--s-prepaid);font-weight:600}
+.col-head .pre-sum{color:var(--s-prepaid);font-weight:600}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.sec.pay{border-color:color-mix(in srgb,var(--s-prepaid) 35%,var(--line))}
+.sec.pay h4 svg{color:var(--s-prepaid)}
+.pay-row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.pay-rest{font-size:13.5px;color:var(--muted);display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.pay-rest b{color:var(--fg);font-variant-numeric:tabular-nums}
+.pay-rest .pct{font-size:12px;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--s-prepaid) 14%,var(--surface));color:var(--s-prepaid);font-weight:600}
+.pay-rest .ok{color:var(--ok);font-weight:600}
+.pay-note{margin:0;font-size:12px;color:var(--faint)}
+.prepay-list{display:flex;flex-direction:column}
+.pl-row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;width:100%}
+.pl-row:hover .pl-who b{color:var(--accent)}
+.pl-who{display:flex;flex-direction:column;gap:4px;align-items:flex-start;min-width:0}
+.pl-who b{font-weight:600;overflow-wrap:anywhere}
+.pl-who .stage-pill{font-size:11.5px;padding:2px 8px}
+.pl-sum{display:flex;flex-direction:column;align-items:flex-end;font-variant-numeric:tabular-nums}
+.pl-sum b{color:var(--s-prepaid);font-weight:700}
+.pl-sum span{font-size:12px;color:var(--muted)}
+.pl-total{display:flex;justify-content:space-between;padding-top:12px;font-size:14px}
+.pl-total b{font-variant-numeric:tabular-nums}
+@media (max-width:760px){.grid3{grid-template-columns:1fr 1fr}.grid3 .fld:last-child{grid-column:1/-1}}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 body{margin:0}
 [hidden]{display:none!important}
@@ -496,6 +520,7 @@ const STAGES = [
   {id:'brief', name:'Бриф / обсуждение'},
   {id:'proposal', name:'КП отправлено'},
   {id:'negotiation', name:'Переговоры'},
+  {id:'prepaid', name:'Предоплата'},
   {id:'work', name:'В работе'},
   {id:'review', name:'Сдано, ждём оплату'},
   {id:'paid', name:'Оплачено'},
@@ -503,8 +528,11 @@ const STAGES = [
   {id:'lost', name:'Отказ'},
 ];
 const STAGE = Object.fromEntries(STAGES.map((s,i)=>[s.id,{...s,i}]));
-const ACTIVE = new Set(['lead','contact','brief','proposal','negotiation','work','review']);
-const PIPE = ['lead','contact','brief','proposal','negotiation','work','review','paid'];
+const ACTIVE = new Set(['lead','contact','brief','proposal','negotiation','prepaid','work','review']);
+const PIPE = ['lead','contact','brief','proposal','negotiation','prepaid','work','review','paid'];
+// Предоплата хранится в карточке отдельно от этапа: пауза, отказ или смена этапа её не сбрасывают
+const prepaidSum = c => Number(c.prepay) || 0;
+const restSum = c => Math.max(0, (Number(c.budget) || 0) - prepaidSum(c));
 const CHANNELS = ['Telegram','WhatsApp','Instagram','VK','Email','Звонок','Встреча','LinkedIn','Behance','Сайт / форма','Рекомендация','Другое'];
 const CH = {'Telegram':['TG','tg'],'WhatsApp':['WA','wa'],'Instagram':['IG','ig'],'VK':['VK','vk'],'Email':['@','mail'],'Звонок':['ТЕЛ','call'],'Встреча':['ВСТ','meet'],'LinkedIn':['in','in'],'Behance':['Bē','be'],'Сайт / форма':['WEB','web'],'Рекомендация':['РЕК','ref'],'Другое':['•','etc']};
 const SERVICES = ['Сайт','Лендинг','Инфографика','Монтаж видео','SMM','Таргет','Брендинг / дизайн','Консультация'];
@@ -606,7 +634,7 @@ async function copy(text, inputEl){
 }
 function blank(){
   const now = new Date().toISOString();
-  return {name:'', company:'', position:'', channel:'Telegram', services:[], stage:'lead', budget:0, priority:'normal',
+  return {name:'', company:'', position:'', channel:'Telegram', services:[], stage:'lead', budget:0, prepay:0, prepayAt:'', priority:'normal',
     tags:[], nextDate:'', nextAction:'', notes:'', links:{}, log:[], createdAt:now, updatedAt:now, lastContactAt:'', stageAt:now};
 }
 function norm(c){ const b = blank(); return {...b, ...c, links:{...(c.links||{})}, services:[...(c.services||[])], tags:[...(c.tags||[])], log:[...(c.log||[])]}; }
@@ -812,9 +840,17 @@ function renderHeader(){
     `<span class="sum-chip"><i style="--sc:var(--ok)"></i><b>${moneyZ(pipe)}</b> в воронке</span>`;
   // боковая карточка «этот месяц»
   const ym = today().slice(0,7);
-  const paidM = all.filter(c => c.stage === 'paid' && (c.paidAt||'').slice(0,7) === ym).reduce((s,c) => s + (Number(c.budget)||0), 0);
-  const goal = Math.max(paidM, all.filter(c => c.stage === 'work' || c.stage === 'review').reduce((s,c) => s + (Number(c.budget)||0), 0) + paidM);
-  $('#todayBox').innerHTML = `<div class="k">Оплачено в ${['январе','феврале','марте','апреле','мае','июне','июле','августе','сентябре','октябре','ноябре','декабре'][d.getMonth()]}</div><div class="v">${moneyZ(paidM)}</div><div class="s">ещё ${moneyZ(goal - paidM)} в работе</div><div class="meter"><span style="width:${goal ? paidM/goal*100 : 0}%"></span></div>`;
+  const paidM = receivedIn(all, ym).total;
+  const goal = Math.max(paidM, all.filter(c => ['prepaid','work','review'].includes(c.stage)).reduce((s,c) => s + restSum(c), 0) + paidM);
+  $('#todayBox').innerHTML = `<div class="k">Получено в ${['январе','феврале','марте','апреле','мае','июне','июле','августе','сентябре','октябре','ноябре','декабре'][d.getMonth()]}</div><div class="v">${moneyZ(paidM)}</div><div class="s">ещё ${moneyZ(goal - paidM)} в работе</div><div class="meter"><span style="width:${goal ? paidM/goal*100 : 0}%"></span></div>`;
+}
+// Деньги, пришедшие за месяц: предоплаты с датой в этом месяце + остатки по сделкам, оплаченным в этом месяце
+function receivedIn(all, ym){
+  const pre = all.filter(c => prepaidSum(c) && (c.prepayAt || '').slice(0,7) === ym);
+  const fin = all.filter(c => c.stage === 'paid' && (c.paidAt || '').slice(0,7) === ym);
+  const preSum = pre.reduce((s,c) => s + prepaidSum(c), 0);
+  const finSum = fin.reduce((s,c) => s + restSum(c), 0);
+  return {total: preSum + finSum, preSum, finSum, count: pre.length + fin.length};
 }
 function renderAll(){
   document.querySelectorAll('#nav button').forEach(b => { if (b.dataset.view === view) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
@@ -844,7 +880,7 @@ function cardHTML(c){
   return `<button class="card" draggable="true" data-id="${c.id}">
     ${c.priority === 'high' ? '<span class="hot">важно</span>' : ''}
     <span class="hd">${avatar(c)}<span style="min-width:0"><span class="nm">${esc(c.name || 'Без имени')}</span>${c.company ? `<br><span class="co">${esc(c.company)}</span>` : ''}</span></span>
-    ${c.services.length || c.example ? `<span class="meta">${c.services.map(s => `<span class="chip">${esc(s)}</span>`).join('')}${c.example ? '<span class="chip ex">пример</span>' : ''}</span>` : ''}
+    ${c.services.length || c.example || prepaidSum(c) ? `<span class="meta">${prepaidSum(c) ? `<span class="chip pre" title="Предоплата получена${c.prepayAt ? ' ' + fmtDay(c.prepayAt) : ''}">предоплата ${moneyZ(prepaidSum(c))}</span>` : ''}${c.services.map(s => `<span class="chip">${esc(s)}</span>`).join('')}${c.example ? '<span class="chip ex">пример</span>' : ''}</span>` : ''}
     <span class="foot">${chn(c.channel)}<span class="money">${c.budget ? money(c.budget) : ''}</span>${d ? `<span class="due" data-s="${d.s}" title="${esc(c.nextAction)}">${d.t}</span>` : ''}</span>
   </button>`;
 }
@@ -856,9 +892,10 @@ function renderBoard(v){
   v.innerHTML = `<div class="board">${STAGES.map(s => {
     const items = list.filter(c => c.stage === s.id).sort((a,b) => (a.nextDate||'9') < (b.nextDate||'9') ? -1 : 1);
     const sum = items.reduce((a,c) => a + (Number(c.budget)||0), 0);
+    const pre = s.id === 'paid' ? 0 : items.reduce((a,c) => a + prepaidSum(c), 0);
     return `<div class="col" data-stage="${s.id}" style="--sc:var(--s-${s.id})">
       <div class="col-head"><div class="t">${esc(s.name)}<span>${items.length}</span></div>
-      <div class="sum"><span>${sum ? moneyZ(sum) : 'нет сумм'}</span></div>
+      <div class="sum"><span>${sum ? moneyZ(sum) : 'нет сумм'}</span>${pre ? `<span class="pre-sum" title="Получено предоплат на этом этапе">↓ ${moneyZ(pre)}</span>` : ''}</div>
       <div class="track"><span style="width:${sum/maxSum*100}%"></span></div></div>
       <div class="col-body">${items.map(cardHTML).join('') || '<div class="col-empty">Перетащите карточку сюда</div>'}</div>
     </div>`;}).join('')}</div>`;
@@ -868,19 +905,20 @@ function renderList(v){
   const list = filtered();
   $('#fCount').textContent = `${list.length} из ${contacts.size}`;
   const key = sort.key, dir = sort.dir === 'asc' ? 1 : -1;
-  const val = c => key === 'stage' ? STAGE[c.stage].i : key === 'budget' ? Number(c.budget)||0 : key === 'nextDate' ? (c.nextDate || '9999') : String(c[key]||'').toLowerCase();
+  const val = c => key === 'stage' ? STAGE[c.stage].i : key === 'budget' ? Number(c.budget)||0 : key === 'prepay' ? prepaidSum(c) : key === 'nextDate' ? (c.nextDate || '9999') : String(c[key]||'').toLowerCase();
   list.sort((a,b) => val(a) < val(b) ? -dir : val(a) > val(b) ? dir : 0);
   const th = (k, t) => `<th data-key="${k}" ${sort.key===k ? `data-sort="${sort.dir}"` : ''}>${t}</th>`;
-  v.innerHTML = `<div class="table-wrap"><table><thead><tr>${th('name','Клиент')}${th('stage','Этап')}${th('channel','Канал')}<th>Услуги</th>${th('budget','Бюджет')}${th('lastContactAt','Последний контакт')}${th('nextDate','Следующий шаг')}</tr></thead><tbody>
+  v.innerHTML = `<div class="table-wrap"><table><thead><tr>${th('name','Клиент')}${th('stage','Этап')}${th('channel','Канал')}<th>Услуги</th>${th('budget','Бюджет')}${th('prepay','Предоплата')}${th('lastContactAt','Последний контакт')}${th('nextDate','Следующий шаг')}</tr></thead><tbody>
   ${list.map(c => { const d = dueLabel(c.nextDate); return `<tr data-id="${c.id}">
     <td><div class="who-cell">${avatar(c)}<div><b>${esc(c.name||'Без имени')}</b>${c.example ? ' <span class="chip ex">пример</span>' : ''}<div class="sub">${esc([c.company,c.position].filter(Boolean).join(' · '))}</div></div></div></td>
     <td><span class="stage-pill" style="--sc:var(--s-${c.stage})">${esc(STAGE[c.stage].name)}</span></td>
     <td>${chn(c.channel, true)}</td>
     <td class="sub">${esc(c.services.join(', '))}</td>
     <td class="num">${money(c.budget)}</td>
+    <td class="num">${prepaidSum(c) ? `${money(prepaidSum(c))}${c.stage !== 'paid' && restSum(c) ? `<div class="sub">остаток ${moneyZ(restSum(c))}</div>` : ''}` : '<span class="sub">—</span>'}</td>
     <td class="sub">${ago(c.lastContactAt)}</td>
     <td>${c.nextDate || ACTIVE.has(c.stage) ? `<span class="due" data-s="${d.s}">${d.t}</span>` : ''}<div class="sub">${esc(c.nextAction)}</div></td>
-  </tr>`; }).join('') || '<tr><td colspan="7" class="sub">Ничего не найдено. Измените поиск или фильтры.</td></tr>'}
+  </tr>`; }).join('') || '<tr><td colspan="8" class="sub">Ничего не найдено. Измените поиск или фильтры.</td></tr>'}
   </tbody></table></div>`;
 }
 function renderTasks(v){
@@ -917,7 +955,8 @@ function renderStats(v){
   const sum = a => a.reduce((s,c) => s + (Number(c.budget)||0), 0);
   const inWork = all.filter(c => c.stage === 'work' || c.stage === 'review');
   const ym = today().slice(0,7);
-  const paidMonth = all.filter(c => c.stage === 'paid' && (c.paidAt||'').slice(0,7) === ym);
+  const got = receivedIn(all, ym);
+  const holding = all.filter(c => c.stage !== 'paid' && prepaidSum(c)).sort((a,b) => (a.stage === 'pause' ? -1 : 0) - (b.stage === 'pause' ? -1 : 0) || prepaidSum(b) - prepaidSum(a));
   const paid = all.filter(c => c.stage === 'paid').length, lost = all.filter(c => c.stage === 'lost').length;
   const conv = paid + lost ? Math.round(paid/(paid+lost)*100) + '%' : '—';
   const avg = paid ? sum(all.filter(c => c.stage === 'paid'))/paid : 0;
@@ -930,10 +969,11 @@ function renderStats(v){
   v.innerHTML = `<div class="kpis">
     ${kpi('hero','var(--accent)','pulse','В воронке', moneyZ(sum(act)), `${act.length} ${plural(act.length,'активная сделка','активные сделки','активных сделок')}`)}
     ${kpi('','var(--s-work)','case','В работе', moneyZ(sum(inWork)), `${inWork.length} ${plural(inWork.length,'проект','проекта','проектов')}, включая сданные`)}
-    ${kpi('','var(--ok)','coin','Оплачено за месяц', moneyZ(sum(paidMonth)), `${paidMonth.length} ${plural(paidMonth.length,'оплата','оплаты','оплат')} · средний чек ${avg ? moneyZ(avg) : '—'}`)}
+    ${kpi('','var(--ok)','coin','Получено за месяц', moneyZ(got.total), `предоплаты ${moneyZ(got.preSum)} · средний чек ${avg ? moneyZ(avg) : '—'}`)}
     ${kpi('','var(--s-proposal)','target','Конверсия в оплату', conv, `${paid} оплачено / ${lost} ${plural(lost,'отказ','отказа','отказов')}`)}
   </div>
   <div class="panels">
+    <div class="panel"><h3>Предоплаты на руках</h3><p class="ph">Клиенты, которые внесли предоплату, но ещё не оплатили всё. Пауза и отказ предоплату не сбрасывают</p>${holding.length ? `<div class="prepay-list">${holding.map(c => `<button class="pl-row" data-open="${c.id}">${avatar(c)}<span class="pl-who"><b>${esc(c.name || 'Без имени')}</b><span class="stage-pill" style="--sc:var(--s-${c.stage})">${esc(STAGE[c.stage].name)}</span></span><span class="pl-sum"><b>${moneyZ(prepaidSum(c))}</b>${restSum(c) ? `<span>остаток ${moneyZ(restSum(c))}</span>` : ''}</span></button>`).join('')}</div><div class="pl-total"><span>Всего предоплат</span><b>${moneyZ(holding.reduce((s,c) => s + prepaidSum(c), 0))}</b></div>` : '<p class="sub">Пока нет клиентов с предоплатой. Укажите сумму в карточке клиента, блок «Оплата».</p>'}</div>
     <div class="panel"><h3>Откуда приходят клиенты</h3><p class="ph">Какие соцсети и каналы реально приносят заказы</p>${byCh.length ? bars(byCh, mx(byCh), r => `var(--c-${r.key})`) : '<p class="sub">Нет данных</p>'}<div class="legend"><span><i></i>оплатили</span><span><i class="a"></i>остальные контакты</span></div></div>
     <div class="panel"><h3>Какие услуги запрашивают</h3><p class="ph">Что чаще всего нужно клиентам</p>${bySv.length ? bars(bySv, mx(bySv), () => 'var(--accent)') : '<p class="sub">Нет данных</p>'}<div class="legend"><span><i></i>оплачено</span><span><i class="a"></i>в процессе или отказ</span></div></div>
     <div class="panel"><h3>Воронка по этапам</h3><p class="ph">Где сейчас находятся ваши контакты</p><div class="funnel">${st.map(x => `<div class="fn" style="--sc:var(--s-${x.s.id})"><span>${esc(x.s.name)}</span><span class="tr"><span class="f" style="width:${x.n/stMax*100}%"></span></span><span class="n">${x.n}</span></div>`).join('')}</div></div>
@@ -986,11 +1026,20 @@ function renderDrawer(){
           return `<div class="handle">${chn(h.ch)}<span>${h.label}</span><input class="inp" id="f-l-${h.k}" data-l="${h.k}" value="${esc(val||'')}" placeholder="${esc(h.ph)}" aria-label="${h.label}">
           <span class="ha">${['phone','email'].includes(h.k) ? '' : `<a class="icon-btn" data-link="${h.k}" href="${esc(l||'#')}" target="_blank" rel="noopener" aria-label="Открыть" aria-disabled="${!l}">${ICON.open}</a>`}<button class="icon-btn" data-copy="${h.k}" aria-label="Скопировать">${ICON.copy}</button></span></div>`; }).join('')}</div>
       </div>
+      <div class="sec pay">
+        <h4>${ICON.coin}Оплата</h4>
+        <div class="grid3">
+          <label class="fld"><span>Бюджет, ${esc(settings.currency)}</span><input id="f-budget" data-f="budget" inputmode="numeric" value="${c.budget || ''}" placeholder="0"></label>
+          <label class="fld"><span>Предоплата, ${esc(settings.currency)}</span><input id="f-prepay" data-f="prepay" inputmode="numeric" value="${c.prepay || ''}" placeholder="0"></label>
+          <label class="fld"><span>Дата предоплаты</span><input type="date" id="f-prepayAt" data-f="prepayAt" value="${esc(c.prepayAt)}"></label>
+        </div>
+        <div class="pay-row"><div class="quick"><button class="btn small" data-prepay="30">30%</button><button class="btn small" data-prepay="50">50%</button><button class="btn small" data-prepay="100">100%</button><button class="btn small ghost" data-prepay="0">Убрать</button></div><div class="pay-rest" id="payRest">${payRestHTML(c)}</div></div>
+        <p class="pay-note">Предоплата сохраняется при любой смене этапа, в том числе при паузе и отказе.</p>
+      </div>
       <div class="sec">
         <h4>${ICON.case}Сделка</h4>
         <div class="grid2">
           <label class="fld"><span>Откуда / где общаемся</span><select id="f-channel" data-f="channel">${opt(CHANNELS, c.channel)}</select></label>
-          <label class="fld"><span>Бюджет, ${esc(settings.currency)}</span><input id="f-budget" data-f="budget" inputmode="numeric" value="${c.budget || ''}" placeholder="0"></label>
           <label class="fld"><span>Должность / роль</span><input id="f-position" data-f="position" value="${esc(c.position)}" placeholder="Маркетолог, владелец…"></label>
           <label class="fld"><span>Приоритет</span><select id="f-priority" data-f="priority"><option value="low" ${c.priority==='low'?'selected':''}>Низкий</option><option value="normal" ${c.priority==='normal'?'selected':''}>Обычный</option><option value="high" ${c.priority==='high'?'selected':''}>Высокий</option></select></label>
         </div>
@@ -1001,6 +1050,13 @@ function renderDrawer(){
     </div>
     <div class="d-foot"><span>Создан ${ago(c.createdAt)} · обновлён ${ago(c.updatedAt)}</span><span class="sp"></span><span id="delZone"><button class="btn small danger" data-act="askDel">Удалить</button></span></div>
   </aside>`;
+}
+function payRestHTML(c){
+  const b = Number(c.budget) || 0, p = prepaidSum(c);
+  if (c.stage === 'paid') return `<span class="ok">Оплачено полностью${b ? ': ' + moneyZ(b) : ''}</span>`;
+  if (!b && !p) return '<span>Укажите бюджет и предоплату</span>';
+  if (!p) return `<span>Предоплаты пока нет</span>`;
+  return `Остаток к оплате: <b>${moneyZ(restSum(c))}</b>${b ? `<span class="pct">${Math.round(p / b * 100)}% внесено</span>` : ''}`;
 }
 function timelineHTML(c){
   if (!c.log.length) return '<li class="sys"><span class="dot">' + ICON.chat + '</span><div><div class="h"><b>Пока пусто</b></div><div class="tx">Записывайте сюда каждый разговор, и через месяц не придётся вспоминать, о чём договорились.</div></div></li>';
@@ -1013,14 +1069,31 @@ function refreshDrawerParts(c){
   const p = $('#progress'); if (p) p.innerHTML = progressHTML(c);
   document.querySelectorAll('#stageBtns button').forEach(b => b.setAttribute('aria-pressed', b.dataset.stageSet === c.stage));
 }
+function logPrepay(c){
+  c.log.unshift({id:uid(), at:new Date().toISOString(), type:'Оплата', channel:'', text:`Предоплата ${moneyZ(prepaidSum(c))}` + (Number(c.budget) ? `, остаток ${moneyZ(restSum(c))}` : '')});
+  c.lastContactAt = c.log[0].at;
+  const t = $('#timeline'); if (t) t.innerHTML = timelineHTML(c);
+}
+// запись в историю, когда сумму предоплаты ввели вручную и вышли из поля
+document.addEventListener('change', e => {
+  if (e.target.id !== 'f-prepay') return;
+  const c = contacts.get(openId); if (!c || !prepaidSum(c)) return;
+  logPrepay(c); change(c, 0);
+});
 function setStage(c, st){
   if (!c || c.stage === st) return;
   c.log.unshift({id:uid(), at:new Date().toISOString(), type:'Этап', text:`${STAGE[c.stage].name} → ${STAGE[st].name}`});
   c.stage = st; c.stageAt = new Date().toISOString();
   if (st === 'paid') c.paidAt = c.stageAt;
   change(c, 0);
-  if (openId === c.id) refreshDrawerParts(c);
+  if (openId === c.id){ refreshDrawerParts(c); const r = $('#payRest'); if (r) r.innerHTML = payRestHTML(c); }
   if (st === 'paid') toast('Оплачено! Отличная работа');
+  else if (st === 'prepaid' && !prepaidSum(c)){
+    toast('Укажите сумму предоплаты в блоке «Оплата»');
+    if (openId === c.id) setTimeout(() => { const f = $('#f-prepay'); if (f){ f.scrollIntoView({block:'center'}); f.focus(); } }, 50);
+    else openDrawer(c.id), setTimeout(() => { const f = $('#f-prepay'); if (f){ f.scrollIntoView({block:'center'}); f.focus(); } }, 50);
+  }
+  else if ((st === 'pause' || st === 'lost') && prepaidSum(c)) toast(`Предоплата ${moneyZ(prepaidSum(c))} сохранена в карточке`);
 }
 
 // ---------- модальные окна ----------
@@ -1080,9 +1153,9 @@ function offer(filename, text){
 }
 function exportJson(){ offer(`crm-${today()}.json`, JSON.stringify([...contacts.values()], null, 2)); }
 function exportCsv(){
-  const cols = ['Имя','Компания','Должность','Этап','Канал','Услуги','Бюджет','Телефон','Email','Telegram','WhatsApp','Instagram','VK','Сайт','Теги','Следующий шаг','Дата шага','Последний контакт','Заметки'];
+  const cols = ['Имя','Компания','Должность','Этап','Канал','Услуги','Бюджет','Предоплата','Дата предоплаты','Остаток','Телефон','Email','Telegram','WhatsApp','Instagram','VK','Сайт','Теги','Следующий шаг','Дата шага','Последний контакт','Заметки'];
   const q = v => '"' + String(v ?? '').replace(/"/g,'""') + '"';
-  const rows = [...contacts.values()].map(c => [c.name,c.company,c.position,STAGE[c.stage].name,c.channel,c.services.join(', '),c.budget||'',c.phone||c.links.phone||'',c.email||c.links.email||'',c.links.telegram,c.links.whatsapp,c.links.instagram,c.links.vk,c.links.website,c.tags.join(', '),c.nextAction,c.nextDate,(c.lastContactAt||'').slice(0,10),c.notes].map(q).join(';'));
+  const rows = [...contacts.values()].map(c => [c.name,c.company,c.position,STAGE[c.stage].name,c.channel,c.services.join(', '),c.budget||'',prepaidSum(c)||'',c.prepayAt||'',c.stage === 'paid' ? 0 : restSum(c),c.phone||c.links.phone||'',c.email||c.links.email||'',c.links.telegram,c.links.whatsapp,c.links.instagram,c.links.vk,c.links.website,c.tags.join(', '),c.nextAction,c.nextDate,(c.lastContactAt||'').slice(0,10),c.notes].map(q).join(';'));
   offer(`crm-${today()}.csv`, '﻿' + [cols.map(q).join(';'), ...rows].join('\r\n'));
 }
 async function importJson(file){
@@ -1143,6 +1216,17 @@ document.addEventListener('click', e => {
   const st = t.closest('[data-stage-set]'); if (st) return setStage(c, st.dataset.stageSet);
   const sv = t.closest('#svcChips button');
   if (sv){ const s = sv.dataset.svc; c.services = c.services.includes(s) ? c.services.filter(x => x !== s) : [...c.services, s]; sv.setAttribute('aria-pressed', c.services.includes(s)); return change(c); }
+  const pp = t.closest('[data-prepay]');
+  if (pp){
+    const pct = Number(pp.dataset.prepay), b = Number(c.budget) || 0;
+    if (pct && !b){ toast('Сначала укажите бюджет'); $('#f-budget').focus(); return; }
+    c.prepay = pct ? Math.round(b * pct / 100) : 0;
+    c.prepayAt = c.prepay ? (c.prepayAt || today()) : '';
+    $('#f-prepay').value = c.prepay || ''; $('#f-prepayAt').value = c.prepayAt;
+    $('#payRest').innerHTML = payRestHTML(c);
+    if (c.prepay) logPrepay(c);
+    return change(c, 0);
+  }
   const nx = t.closest('[data-next]');
   if (nx){ c.nextDate = nx.dataset.next === 'clear' ? '' : addDays(Number(nx.dataset.next)); if (nx.dataset.next === 'clear') c.nextAction = ''; $('#f-nextDate').value = c.nextDate; $('#f-nextAction').value = c.nextAction; if (c.nextDate && !c.nextAction) $('#f-nextAction').focus(); return change(c); }
   const cp = t.closest('[data-copy]'); if (cp){ const inp = $('#f-l-' + cp.dataset.copy); if (inp.value) copy(inp.value, inp); else toast('Поле пустое'); return; }
@@ -1155,11 +1239,15 @@ document.addEventListener('input', e => {
   const el = e.target;
   if (el.dataset.f){
     const f = el.dataset.f;
-    if (f === 'budget') c.budget = Number(el.value.replace(/[^\d.]/g,'')) || 0;
+    if (f === 'budget' || f === 'prepay'){
+      c[f] = Number(el.value.replace(/[^\d.]/g,'')) || 0;
+      if (f === 'prepay' && c.prepay && !c.prepayAt){ c.prepayAt = today(); $('#f-prepayAt').value = c.prepayAt; }
+      const r = $('#payRest'); if (r) r.innerHTML = payRestHTML(c);
+    }
     else if (f === 'tags') c.tags = el.value.split(',').map(s => s.trim()).filter(Boolean);
     else c[f] = el.value;
     if (f === 'name'){ const av = document.querySelector('.d-id .av'); if (av){ av.textContent = initials(c); av.style.setProperty('--avc', avColor(c)); } }
-    change(c, f === 'priority' || f === 'channel' || f === 'nextDate' ? 0 : 600);
+    change(c, f === 'priority' || f === 'channel' || f === 'nextDate' || f === 'prepayAt' ? 0 : 600);
   } else if (el.dataset.l){
     const k = el.dataset.l;
     if (k === 'phone' || k === 'email') c[k] = el.value; else c.links[k] = el.value;
