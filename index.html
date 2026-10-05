@@ -416,16 +416,11 @@ body{margin:0}
     <h1>Вход в <em>CRM</em></h1>
     <p id="gateText">Проверяю вход…</p>
     <div id="gateActions" hidden>
-      <div style="display:flex;flex-direction:column;gap:18px">
-        <button class="gbtn" id="googleBtn" type="button"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3zM12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22zM6.4 14a6 6 0 0 1 0-3.9V7.5H3.1a10 10 0 0 0 0 9zM12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.9A10 10 0 0 0 3.1 7.5l3.3 2.6C7.2 7.8 9.4 6 12 6z"/></svg>Войти через Google</button>
-        <div class="or">или по email</div>
-        <form id="emailForm">
-          <input type="email" id="loginEmail" placeholder="Email" autocomplete="username" required>
-          <input type="password" id="loginPass" placeholder="Пароль" autocomplete="current-password" required>
-          <button class="obtn" type="submit">Войти</button>
-          <button class="forgot" id="forgotBtn" type="button">Забыли пароль?</button>
-        </form>
-      </div>
+      <form id="loginForm" autocomplete="on">
+        <input type="text" id="loginName" placeholder="Логин" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+        <input type="password" id="loginPass" placeholder="Пароль" autocomplete="current-password" required>
+        <button class="gbtn" type="submit">Войти</button>
+      </form>
     </div>
     <div class="gate-err" id="gateErr" role="alert"></div>
     <small>Доступ только для владельца. Данные защищены правилами базы Firebase.</small>
@@ -451,7 +446,7 @@ body{margin:0}
       <button class="linkbtn" id="exportJson"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Резервная копия (JSON)</button>
       <button class="linkbtn" id="importBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></svg>Загрузить копию</button>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
-      <button class="linkbtn" id="passBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Пароль для входа</button>
+      <button class="linkbtn" id="passBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>Сменить пароль</button>
       <div class="store-state" id="storeState" data-mode="loading">Подключаюсь к базе…</div>
       <div class="account"><span id="accountEmail"></span><button id="logoutBtn" type="button">Выйти</button></div>
     </div>
@@ -490,9 +485,9 @@ body{margin:0}
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, signOut, EmailAuthProvider, linkWithCredential, updatePassword, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, onSnapshot, setDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import { firebaseConfig, OWNER_EMAIL } from './firebase-config.js';
+import { firebaseConfig, OWNER_UID } from './firebase-config.js';
 
 // ---------- справочники ----------
 const STAGES = [
@@ -677,7 +672,12 @@ function setStoreState(mode, text){ const el = $('#storeState'); el.dataset.mode
 window.addEventListener('offline', () => setStoreState('offline', 'Офлайн: сохраню при подключении'));
 window.addEventListener('online', () => { if (store.uid) setStoreState('db', 'Сохранено в облаке'); });
 
-// ---------- вход ----------
+// ---------- вход по логину и паролю ----------
+// Firebase входит по email, поэтому логин превращается во внутренний адрес проекта.
+// Письма на него не отправляются, пользователь видит только логин.
+const LOGIN_DOMAIN = '@' + firebaseConfig.authDomain;
+const loginToEmail = login => login.trim().toLowerCase().replace(/\s+/g, '') + LOGIN_DOMAIN;
+const emailToLogin = email => (email || '').endsWith(LOGIN_DOMAIN) ? email.slice(0, -LOGIN_DOMAIN.length) : (email || '');
 let gateError = '';
 function showGate(text, withActions, err){
   $('#gate').hidden = false; $('#app').hidden = true;
@@ -687,50 +687,34 @@ function showGate(text, withActions, err){
 }
 function authMsg(e){
   const c = e && e.code || '';
-  if (c === 'auth/invalid-credential' || c === 'auth/wrong-password' || c === 'auth/user-not-found' || c === 'auth/invalid-email') return 'Неверный email или пароль.';
-  if (c === 'auth/unauthorized-domain') return 'Этот адрес сайта не добавлен в Firebase: Authentication → Settings → Authorized domains.';
-  if (c === 'auth/operation-not-allowed') return 'Этот способ входа не включён в Firebase: Authentication → Sign-in method.';
-  if (c === 'auth/too-many-requests') return 'Слишком много попыток. Подождите пару минут.';
+  if (c === 'auth/invalid-credential' || c === 'auth/wrong-password' || c === 'auth/user-not-found' || c === 'auth/invalid-email') return 'Неверный логин или пароль.';
+  if (c === 'auth/user-disabled') return 'Этот аккаунт отключён.';
+  if (c === 'auth/too-many-requests') return 'Слишком много попыток. Подождите несколько минут.';
   if (c === 'auth/network-request-failed') return 'Нет интернета. Проверьте подключение.';
   return 'Не удалось войти (' + c + ').';
 }
 function boot(){
-  if (!configured){ showGate('CRM ещё не подключена к базе. Заполните файл firebase-config.js по инструкции из README.md.', false); return; }
+  if (!configured){ showGate('CRM ещё не подключена к базе.', false); return; }
   fbApp = initializeApp(firebaseConfig);
   auth = getAuth(fbApp);
   try { fdb = initializeFirestore(fbApp, {localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})}); }
   catch(e){ fdb = initializeFirestore(fbApp, {}); }
   onAuthStateChanged(auth, user => {
-    if (!user){ store.stop(); showGate('Войдите, чтобы открыть CRM.', true, gateError); gateError = ''; return; }
-    if (OWNER_EMAIL && (user.email || '').toLowerCase() !== OWNER_EMAIL.trim().toLowerCase()){
-      gateError = `Аккаунт ${user.email || ''} не имеет доступа к этой CRM.`;
+    if (!user){ store.stop(); showGate('Введите логин и пароль.', true, gateError); gateError = ''; return; }
+    if (OWNER_UID && user.uid !== OWNER_UID){
+      gateError = 'У этого аккаунта нет доступа к CRM.';
       signOut(auth); return;
     }
     $('#gate').hidden = true; $('#app').hidden = false;
-    $('#accountEmail').textContent = user.email || '';
+    $('#accountEmail').textContent = emailToLogin(user.email);
     store.start(user.uid);
     renderAll();
   });
-  $('#googleBtn').addEventListener('click', async () => {
-    $('#gateErr').textContent = '';
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({prompt:'select_account'});
-    try { await signInWithPopup(auth, provider); }
-    catch(e){
-      if (e.code === 'auth/popup-blocked') $('#gateErr').textContent = 'Браузер заблокировал окно входа Google. Разрешите всплывающие окна для этого сайта и нажмите кнопку ещё раз.';
-      else if (e.code === 'auth/operation-not-supported-in-this-environment') $('#gateErr').textContent = 'Здесь вход через Google недоступен. Войдите по email и паролю: задать пароль можно в CRM, пункт «Пароль для входа».';
-      else if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') $('#gateErr').textContent = authMsg(e);
-    }
-  });
-  $('#emailForm').addEventListener('submit', async e => {
+  $('#loginForm').addEventListener('submit', async e => {
     e.preventDefault(); $('#gateErr').textContent = '';
-    try { await signInWithEmailAndPassword(auth, $('#loginEmail').value.trim(), $('#loginPass').value); }
-    catch(err){ $('#gateErr').textContent = authMsg(err); }
-  });
-  $('#forgotBtn').addEventListener('click', async () => {
-    const email = $('#loginEmail').value.trim();
-    if (!email){ $('#gateErr').textContent = 'Введите email, и я отправлю ссылку для нового пароля.'; $('#loginEmail').focus(); return; }
-    try { await sendPasswordResetEmail(auth, email); $('#gateErr').innerHTML = '<span class="gate-ok">Если для этого email задан пароль, письмо со ссылкой уже отправлено. Проверьте почту и папку «Спам».</span>'; }
+    const login = $('#loginName').value;
+    if (!login.trim()) return;
+    try { await signInWithEmailAndPassword(auth, loginToEmail(login), $('#loginPass').value); }
     catch(err){ $('#gateErr').textContent = authMsg(err); }
   });
   $('#logoutBtn').addEventListener('click', () => signOut(auth));
@@ -738,33 +722,33 @@ function boot(){
 }
 function openPassword(){
   const user = auth && auth.currentUser; if (!user) return;
-  const has = user.providerData.some(p => p.providerId === 'password');
   $('#modalSlot').innerHTML = `<div class="modal" data-act="closeModal"><form id="passForm" autocomplete="off">
-    <h3>Пароль <em>для входа</em></h3>
-    <p class="lead">${has ? 'Смените пароль для входа по email.' : 'Задайте пароль, чтобы входить по email на любом устройстве, в том числе из приложения на iPhone, где вход через Google может не работать.'} Email для входа: <b>${esc(user.email)}</b></p>
+    <h3>Сменить <em>пароль</em></h3>
+    <p class="lead">Логин: <b>${esc(emailToLogin(user.email))}</b>. Новый пароль будет действовать на всех устройствах.</p>
+    <label class="fld"><span>Текущий пароль</span><input type="password" id="p0" autocomplete="current-password" required></label>
     <label class="fld"><span>Новый пароль (минимум 8 символов)</span><input type="password" id="p1" autocomplete="new-password" minlength="8" required></label>
-    <label class="fld"><span>Повторите пароль</span><input type="password" id="p2" autocomplete="new-password" minlength="8" required></label>
+    <label class="fld"><span>Повторите новый пароль</span><input type="password" id="p2" autocomplete="new-password" minlength="8" required></label>
     <div class="sub" id="passErr" role="alert"></div>
-    <div class="acts"><button type="button" class="btn" data-act="closeModal">Отмена</button><button class="btn primary" type="submit">Сохранить пароль</button></div>
+    <div class="acts"><button type="button" class="btn" data-act="closeModal">Отмена</button><button class="btn primary" type="submit">Сохранить</button></div>
   </form></div>`;
-  setTimeout(() => $('#p1').focus(), 0);
+  setTimeout(() => $('#p0').focus(), 0);
 }
 document.addEventListener('submit', async e => {
   if (e.target.id !== 'passForm') return;
   e.preventDefault();
-  const p1 = $('#p1').value, p2 = $('#p2').value, err = $('#passErr');
+  const p0 = $('#p0').value, p1 = $('#p1').value, p2 = $('#p2').value, err = $('#passErr');
   if (p1.length < 8) { err.textContent = 'Пароль должен быть не короче 8 символов.'; return; }
-  if (p1 !== p2) { err.textContent = 'Пароли не совпадают.'; return; }
+  if (p1 !== p2) { err.textContent = 'Новые пароли не совпадают.'; return; }
   const user = auth.currentUser;
   try {
-    if (user.providerData.some(p => p.providerId === 'password')) await updatePassword(user, p1);
-    else await linkWithCredential(user, EmailAuthProvider.credential(user.email, p1));
-    closeModal(); toast('Пароль сохранён. Теперь можно входить по email');
+    await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, p0));
+    await updatePassword(user, p1);
+    closeModal(); toast('Пароль изменён');
   } catch(x){
-    err.textContent = x.code === 'auth/requires-recent-login' ? 'Для безопасности выйдите, войдите снова и повторите.'
+    err.textContent = x.code === 'auth/invalid-credential' || x.code === 'auth/wrong-password' ? 'Текущий пароль неверный.'
       : x.code === 'auth/weak-password' ? 'Слишком простой пароль, придумайте сложнее.'
-      : x.code === 'auth/operation-not-allowed' ? 'Вход по паролю не включён в Firebase.'
-      : 'Не удалось сохранить пароль (' + x.code + ').';
+      : x.code === 'auth/too-many-requests' ? 'Слишком много попыток. Подождите несколько минут.'
+      : 'Не удалось сменить пароль (' + x.code + ').';
   }
 });
 

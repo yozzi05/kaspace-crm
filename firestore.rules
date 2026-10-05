@@ -2,17 +2,11 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Владелец CRM: замените email на свой (тот же, что в firebase-config.js)
-    function isOwner(userId) {
-      return request.auth != null
-        && request.auth.uid == userId
-        && request.auth.token.email == "cyber.yozzi@gmail.com"
-        && request.auth.token.email_verified == true;
-    }
-
-    // Все данные CRM лежат в users/<ваш uid>/...
+    // Данные CRM доступны только одному аккаунту владельца (по его UID)
     match /users/{userId}/{document=**} {
-      allow read, write: if isOwner(userId);
+      allow read, write: if request.auth != null
+        && request.auth.uid == userId
+        && userId == "n8iJaMJyntScJ0XPqxQS49vTBei2";
     }
 
     // Всё остальное закрыто для всех

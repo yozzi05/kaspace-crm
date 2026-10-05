@@ -10,6 +10,6 @@ export const firebaseConfig = {
   appId: "1:577985936390:web:934c79f4005daa34a75787"
 };
 
-// Email владельца: только этот аккаунт сможет открыть CRM.
-// Такой же email указан в правилах firestore.rules.
-export const OWNER_EMAIL = "cyber.yozzi@gmail.com";
+// ID единственного аккаунта, которому открыта CRM (Firebase → Authentication → Users → User UID).
+// Такой же ID указан в правилах firestore.rules.
+export const OWNER_UID = "n8iJaMJyntScJ0XPqxQS49vTBei2";
