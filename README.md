@@ -11,7 +11,21 @@
 Вход только по логину и паролю. Логин `kaspace`.
 Внутри Firebase он хранится как `kaspace@kaspace-crm.firebaseapp.com`, но вводить нужно только логин.
 Сменить пароль: в CRM → «Сменить пароль».
-Если пароль забыт: Firebase Console → Authentication → Users → ⋮ у пользователя → Reset password / Edit.
+
+### Если пароль забыт
+
+Письмо со сбросом не поможет: у внутреннего адреса нет почтового ящика. Нужна ссылка для нового пароля:
+
+1. Откройте [Cloud Shell проекта](https://shell.cloud.google.com/?project=kaspace-crm&show=terminal) под Google-аккаунтом владельца проекта.
+2. Выполните команду:
+
+   ```bash
+   curl -s -X POST "https://identitytoolkit.googleapis.com/v1/projects/kaspace-crm/accounts:sendOobCode" -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "x-goog-user-project: kaspace-crm" -H "Content-Type: application/json" -d '{"requestType":"PASSWORD_RESET","email":"kaspace@kaspace-crm.firebaseapp.com","returnOobLink":true}'
+   ```
+
+3. Откройте ссылку из поля `oobLink` и задайте новый пароль. Никому её не передавайте.
+
+Этот способ ещё не проверялся на практике. Контакты при смене пароля не затрагиваются.
 
 ## Безопасность
 
